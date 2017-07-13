@@ -2,6 +2,7 @@ From iris.program_logic Require Export ectx_language ectxi_language.
 From iris.algebra Require Export ofe.
 From stdpp Require Export strings.
 From stdpp Require Import gmap.
+Require Import Reals.
 Set Default Proof Using "Type".
 
 Module heap_lang.
@@ -11,11 +12,13 @@ Open Scope Z_scope.
 Definition loc := positive. (* Really, any countable type. *)
 
 Inductive base_lit : Set :=
-  | LitInt (n : Z) | LitBool (b : bool) | LitUnit | LitLoc (l : loc).
+  | LitInt (n : Z) | LitREAL (r : R) | LitBool (b : bool) | LitUnit | LitLoc (l : loc).
 Inductive un_op : Set :=
   | NegOp | MinusUnOp.
 Inductive bin_op : Set :=
-  | PlusOp | MinusOp | LeOp | LtOp | EqOp.
+  | PlusOp | MinusOp | MulOp | DivOp | LeOp | LtOp | EqOp.
+Inductive tern_op : Set :=
+  | RPlusOp | RMinusOp | RMulOp | RDivOp.
 
 Inductive binder := BAnon | BNamed : string → binder.
 Delimit Scope binder_scope with bind.
@@ -42,6 +45,7 @@ Inductive expr :=
   | Lit (l : base_lit)
   | UnOp (op : un_op) (e : expr)
   | BinOp (op : bin_op) (e1 e2 : expr)
+  | TernOp (op : tern_op) (e1 e2 e3 : expr)
   | If (e0 e1 e2 : expr)
   (* Products *)
   | Pair (e1 e2 : expr)
@@ -70,7 +74,7 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
      is_closed X e
   | App e1 e2 | BinOp _ e1 e2 | Pair e1 e2 | Store e1 e2 =>
      is_closed X e1 && is_closed X e2
-  | If e0 e1 e2 | Case e0 e1 e2 | CAS e0 e1 e2 =>
+  | TernOp _ e0 e1 e2 | If e0 e1 e2 | Case e0 e1 e2 | CAS e0 e1 e2 =>
      is_closed X e0 && is_closed X e1 && is_closed X e2
   end.
 
@@ -126,11 +130,22 @@ Qed.
 Instance of_val_inj : Inj (=) (=) of_val.
 Proof. by intros ?? Hv; apply (inj Some); rewrite -!to_of_val Hv. Qed.
 
+Instance R_eq_dec : EqDecision R.
+Proof.
+  intros.
+  destruct (Rle_dec x y).
+  - destruct (Rle_lt_or_eq_dec x y); auto.
+    + right. intro. subst. eapply Rlt_irrefl. eauto.
+    + left. auto.
+  - right. intro. subst. apply n. apply Rle_refl.
+Qed.
 Instance base_lit_eq_dec : EqDecision base_lit.
 Proof. solve_decision. Defined.
 Instance un_op_eq_dec : EqDecision un_op.
 Proof. solve_decision. Defined.
 Instance bin_op_eq_dec : EqDecision bin_op.
+Proof. solve_decision. Defined.
+Instance tern_op_eq_dec : EqDecision tern_op.
 Proof. solve_decision. Defined.
 Instance expr_eq_dec : EqDecision expr.
 Proof. solve_decision. Defined.
@@ -153,6 +168,9 @@ Inductive ectx_item :=
   | UnOpCtx (op : un_op)
   | BinOpLCtx (op : bin_op) (e2 : expr)
   | BinOpRCtx (op : bin_op) (v1 : val)
+  | TernOp1Ctx (op : tern_op) (e2 e3 : expr)
+  | TernOp2Ctx (op : tern_op) (v1 : val) (e3 : expr)
+  | TernOp3Ctx (op : tern_op) (v1 v2 : val)
   | IfCtx (e1 e2 : expr)
   | PairLCtx (e2 : expr)
   | PairRCtx (v1 : val)
@@ -176,6 +194,9 @@ Definition fill_item (Ki : ectx_item) (e : expr) : expr :=
   | UnOpCtx op => UnOp op e
   | BinOpLCtx op e2 => BinOp op e e2
   | BinOpRCtx op v1 => BinOp op (of_val v1) e
+  | TernOp1Ctx op e2 e3 => TernOp op e e2 e3
+  | TernOp2Ctx op v1 e3 => TernOp op (of_val v1) e e3
+  | TernOp3Ctx op v1 v2 => TernOp op (of_val v1) (of_val v2) e
   | IfCtx e1 e2 => If e e1 e2
   | PairLCtx e2 => Pair e e2
   | PairRCtx v1 => Pair (of_val v1) e
@@ -203,6 +224,7 @@ Fixpoint subst (x : string) (es : expr) (e : expr)  : expr :=
   | Lit l => Lit l
   | UnOp op e => UnOp op (subst x es e)
   | BinOp op e1 e2 => BinOp op (subst x es e1) (subst x es e2)
+  | TernOp op e1 e2 e3 => TernOp op (subst x es e1) (subst x es e2) (subst x es e3)
   | If e0 e1 e2 => If (subst x es e0) (subst x es e1) (subst x es e2)
   | Pair e1 e2 => Pair (subst x es e1) (subst x es e2)
   | Fst e => Fst (subst x es e)
@@ -218,13 +240,14 @@ Fixpoint subst (x : string) (es : expr) (e : expr)  : expr :=
   end.
 
 Definition subst' (mx : binder) (es : expr) : expr → expr :=
-  match mx with BNamed x => subst x es | BAnon => id end.
+  match mx with BNamed x => subst x es | BAnon => Datatypes.id end.
 
 (** The stepping relation *)
 Definition un_op_eval (op : un_op) (v : val) : option val :=
   match op, v with
   | NegOp, LitV (LitBool b) => Some $ LitV $ LitBool (negb b)
   | MinusUnOp, LitV (LitInt n) => Some $ LitV $ LitInt (- n)
+  | MinusUnOp, LitV (LitREAL r) => Some $ LitV $ LitREAL (- r)
   | _, _ => None
   end.
 
@@ -232,10 +255,17 @@ Definition bin_op_eval (op : bin_op) (v1 v2 : val) : option val :=
   match op, v1, v2 with
   | PlusOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitInt (n1 + n2)
   | MinusOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitInt (n1 - n2)
+  | MulOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitInt (n1 * n2)
+  | DivOp, LitV (LitInt n1), LitV (LitInt n2) => if bool_decide (n2 = 0) then Some $ LitV $ LitInt (n1 / n2) else None
   | LeOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitBool $ bool_decide (n1 ≤ n2)
   | LtOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitBool $ bool_decide (n1 < n2)
   | EqOp, v1, v2 => Some $ LitV $ LitBool $ bool_decide (v1 = v2)
   | _, _, _ => None
+  end.
+
+Definition tern_op_eval (op : tern_op) (v1 v2 v3 : val) : option val :=
+  match op, v1, v2, v3 with
+  | _, _, _, _ => None
   end.
 
 Inductive head_step : expr → state → expr → state → list (expr) → Prop :=
@@ -252,6 +282,10 @@ Inductive head_step : expr → state → expr → state → list (expr) → Prop
      to_val e1 = Some v1 → to_val e2 = Some v2 →
      bin_op_eval op v1 v2 = Some v' → 
      head_step (BinOp op e1 e2) σ (of_val v') σ []
+  | TernOpS op e1 e2 e3 v1 v2 v3 v' σ :
+     to_val e1 = Some v1 → to_val e2 = Some v2 → to_val e3 = Some v3 →
+     tern_op_eval op v1 v2 v3 = Some v' → 
+     head_step (TernOp op e1 e2 e3) σ (of_val v') σ []
   | IfTrueS e1 e2 σ :
      head_step (If (Lit $ LitBool true) e1 e2) σ e1 σ []
   | IfFalseS e1 e2 σ :

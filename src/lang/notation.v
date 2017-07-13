@@ -1,5 +1,5 @@
 From iris.program_logic Require Import language.
-From iris.heap_lang Require Export lang tactics.
+Require Export lang tactics.
 Set Default Proof Using "Type".
 
 Coercion LitInt : Z >-> base_lit.

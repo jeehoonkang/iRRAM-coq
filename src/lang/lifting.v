@@ -1,10 +1,10 @@
 From iris.base_logic Require Export gen_heap.
 From iris.program_logic Require Export weakestpre.
 From iris.program_logic Require Import ectx_lifting.
-From iris.heap_lang Require Export lang.
-From iris.heap_lang Require Import tactics.
 From iris.proofmode Require Import tactics.
 From stdpp Require Import fin_maps.
+Require Export lang.
+Require Import tactics.
 Set Default Proof Using "Type".
 Import uPred.
 

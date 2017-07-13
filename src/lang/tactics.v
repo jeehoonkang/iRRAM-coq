@@ -1,6 +1,6 @@
-From iris.heap_lang Require Export lang.
+Require Export lang.
 Set Default Proof Using "Type".
-Import heap_lang.
+Import lang.
 
 (** We define an alternative representation of expressions in which the
 embedding of values and closed expressions is explicit. By reification of
