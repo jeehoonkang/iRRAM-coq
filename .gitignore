@@ -1,0 +1,9 @@
+*.vio
+*.vo
+*.v.d
+*.glob
+.*.vo.aux
+
+/_CoqProject
+/Makefile.coq
+/.build

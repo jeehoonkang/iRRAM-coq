@@ -1,0 +1,18 @@
+opam-version: "1.2"
+name: "coq-iRRAM"
+version: "dev"
+maintainer: "Jeehoon Kang"
+authors: "Jeehoon Kang"
+homepage: "https://github.com/jeehoonkang/iRRAM-coq"
+bug-reports: "https://github.com/jeehoonkang/iRRAM-coq/issues"
+dev-repo: "https://github.com/jeehoonkang/iRRAM-coq.git"
+build: [
+  [make "-j%{jobs}%"]
+]
+install: [make "install"]
+# TODO: probably we want to install things to a different folder, "ra" is rather undescriptive
+remove: [ "sh" "-c" "rm -rf '%{lib}%/coq/user-contrib/iRRAM" ]
+depends: [
+  "coq-iris" #{ = "3.0.0" }
+  "coq-stdpp"
+]
