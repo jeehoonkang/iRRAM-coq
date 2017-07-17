@@ -3,11 +3,11 @@ From iris.base_logic.lib Require Export invariants.
 From iris.heap_lang Require Export lang.
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import frac_auth auth.
-From iRRAM.lang Require Import proofmode notation.
+From iRRAM.lang Require Import proofmode notation extraction.
 Require Import Reals.
 Set Default Proof Using "Type".
 
-Definition ilog2 : val :=
+Definition ilog2 : expr :=
   λ: "x",
   let: "l" := ref #1 in
   (if: ##(3/2) <(#-1) "x"
@@ -18,6 +18,8 @@ Definition ilog2 : val :=
         until (##3 * ##2 ^ (!"l"-#2)) <(!"l"-#2) "x")
   ;;
   !"l".
+
+Eval compute in (expr_to_iRRAM_function_string "ilog2" [iRRAM_REAL] iRRAM_REAL ilog2).
 
 Section proof.
   Context `{!heapG Σ} (N : namespace).
