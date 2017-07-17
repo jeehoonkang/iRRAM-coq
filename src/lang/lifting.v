@@ -3,6 +3,7 @@ From iris.program_logic Require Export weakestpre.
 From iris.program_logic Require Import ectx_lifting.
 From iris.proofmode Require Import tactics.
 From stdpp Require Import fin_maps.
+Require Import Reals.
 Require Export lang.
 Require Import tactics.
 Set Default Proof Using "Type".
@@ -91,6 +92,22 @@ Proof.
   intros; inv_head_step; eauto.
 Qed.
 
+Lemma wp_while_true E e1 e2 Φ :
+  to_val e1 = Some $ LitV $ LitBool $ true ->
+  ▷ WP (Seq e2 (While e1 e2)) @ E {{ Φ }} ⊢ WP While e1 e2 @ E {{ Φ }}.
+Proof.
+  intros ?. rewrite -(wp_lift_pure_det_head_step_no_fork' (While _ _)); eauto.
+  intros; inv_head_step; eauto.
+Qed.
+
+Lemma wp_while_false E e1 e2 Φ :
+  to_val e1 = Some $ LitV $ LitBool $ false ->
+  ▷ WP (Lit $ LitBool $ false) @ E {{ Φ }} ⊢ WP While e1 e2 @ E {{ Φ }}.
+Proof.
+  intros ?. rewrite -(wp_lift_pure_det_head_step_no_fork' (While _ _)); eauto.
+  intros; inv_head_step; eauto.
+Qed.
+
 Lemma wp_un_op E op e v v' Φ :
   to_val e = Some v →
   un_op_eval op v = Some v' →
@@ -109,6 +126,18 @@ Proof.
   intros. rewrite -(wp_lift_pure_det_head_step_no_fork' (BinOp op _ _) (of_val v'))
     -?wp_value'; eauto.
   intros; inv_head_step; eauto.
+Qed.
+
+Lemma wp_tern_op E op e1 e2 e3 v1 v2 v3 Φ :
+  to_val e1 = Some v1 → to_val e2 = Some v2 → to_val e3 = Some v3 ->
+  (exists v', tern_op_eval op v1 v2 v3 v') ->
+  ▷ (∀ v', ⌜tern_op_eval op v1 v2 v3 v'⌝ ={E}=∗ Φ v') ⊢ WP TernOp op e1 e2 e3 @ E {{ Φ }}.
+Proof.
+  iIntros (V1 V2 V3 PROGRESS) "HΦ". iApply wp_lift_atomic_head_step_no_fork; auto.
+  iIntros (σ1) "Hσ !>"; iSplit; first by destruct PROGRESS; eauto.
+  iNext; iIntros (e0 σ2 efs Hstep); inv_head_step.
+  iRevert (H11). iIntros "#Hstep". iSpecialize ("HΦ" $! v' with "Hstep"). iMod "HΦ".
+  iModIntro; iSplit=> //. iFrame.
 Qed.
 
 Lemma wp_if_true E e1 e2 Φ :
@@ -278,4 +307,26 @@ Proof.
   intros. rewrite -wp_bin_op //; [].
   destruct (bool_decide_reflect (v1 = v2)); by eauto.
 Qed.
+
+Lemma wp_rlt E e1 e2 e3 k v1 v2 Φ :
+  to_val e1 = Some (LitV $ LitInt $ k) → to_val e2 = Some (LitV $ LitREAL $ v1) → to_val e3 = Some (LitV $ LitREAL $ v2) ->
+  ▷ (∀ v', ⌜tern_op_eval RLtOp (LitV $ LitInt $ k) (LitV $ LitREAL $ v1) (LitV $ LitREAL $ v2) v'⌝ ={E}=∗ Φ v') ⊢ WP TernOp RLtOp e1 e2 e3 @ E {{ Φ }}.
+Proof.
+  intros. apply wp_tern_op; auto.
+  destruct (Rlt_dec v1 v2).
+  { exists (LitV $ LitBool $ true). econstructor.
+    eapply Rlt_le_trans; eauto.
+    rewrite <- (Rplus_0_r v2) at 1. apply Rplus_le_compat.
+    - apply Rle_refl.
+    - unfold Rpower. apply Rlt_le. apply exp_pos.
+  }
+  { exists (LitV $ LitBool $ false). econstructor.
+    apply Rnot_lt_le in n.
+    eapply Rle_lt_trans; eauto.
+    rewrite <- (Rplus_0_r v1) at 1. apply Rplus_le_lt_compat.
+    - apply Rle_refl.
+    - unfold Rpower. apply exp_pos.
+  }
+Qed.
+
 End lifting.

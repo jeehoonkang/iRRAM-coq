@@ -81,12 +81,14 @@ Tactic Notation "wp_lam" :=
 
 Tactic Notation "wp_let" := wp_lam.
 Tactic Notation "wp_seq" := wp_let.
+Tactic Notation "wp_while" := wp_seq.
 
 Tactic Notation "wp_op" :=
   iStartProof;
   lazymatch goal with
   | |- _ ⊢ wp ?E ?e ?Q => reshape_expr e ltac:(fun K e' =>
     lazymatch eval hnf in e' with
+    | TernOp RLtOp _ _ _ => wp_bind_core K; apply wp_rlt; wp_finish
     | BinOp LtOp _ _ => wp_bind_core K; apply wp_lt; wp_finish
     | BinOp LeOp _ _ => wp_bind_core K; apply wp_le; wp_finish
     | BinOp EqOp _ _ =>
@@ -97,7 +99,7 @@ Tactic Notation "wp_op" :=
     | UnOp _ _ =>
        wp_bind_core K; etrans;
          [|eapply wp_un_op; [wp_done|try fast_done]]; wp_finish
-    end) || fail "wp_op: cannot find 'BinOp' or 'UnOp' in" e
+    end) || fail "wp_op: cannot find 'TernOp', 'BinOp' or 'UnOp' in" e
   | _ => fail "wp_op: not a 'wp'"
   end.
 

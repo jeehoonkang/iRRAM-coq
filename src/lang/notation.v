@@ -36,10 +36,18 @@ Notation "'ref' e" := (Alloc e%E)
   (at level 30, right associativity) : expr_scope.
 Notation "- e" := (UnOp MinusUnOp e%E)
   (at level 35, right associativity) : expr_scope.
+Notation "e1 <( k ) e2" := (TernOp RLtOp k%E e1%E e2%E)
+  (at level 50, left associativity) : expr_scope.
 Notation "e1 + e2" := (BinOp PlusOp e1%E e2%E)
   (at level 50, left associativity) : expr_scope.
 Notation "e1 - e2" := (BinOp MinusOp e1%E e2%E)
   (at level 50, left associativity) : expr_scope.
+Notation "e1 * e2" := (BinOp MulOp e1%E e2%E)
+  (at level 40, left associativity) : expr_scope.
+Notation "e1 / e2" := (BinOp DivOp e1%E e2%E)
+  (at level 40, left associativity) : expr_scope.
+Notation "e1 ^ e2" := (BinOp PowOp e1%E e2%E)
+  (at level 30, right associativity) : expr_scope.
 Notation "e1 ≤ e2" := (BinOp LeOp e1%E e2%E) (at level 70) : expr_scope.
 Notation "e1 < e2" := (BinOp LtOp e1%E e2%E) (at level 70) : expr_scope.
 Notation "e1 = e2" := (BinOp EqOp e1%E e2%E) (at level 70) : expr_scope.
@@ -55,6 +63,8 @@ Notation "'rec:' f x := e" := (locked (RecV f%bind x%bind e%E))
    format "'[' '[hv' 'rec:'  f  x  :=  ']' '/  ' e ']'") : val_scope.
 Notation "'if:' e1 'then' e2 'else' e3" := (If e1%E e2%E e3%E)
   (at level 200, e1, e2, e3 at level 200) : expr_scope.
+Notation "'while:' e1 'do' e2" := (While e1%E e2%E)
+  (at level 200, e1, e2 at level 200) : expr_scope.
 
 (** Derived notions, in order of declaration. The notations for let and seq
 are stated explicitly instead of relying on the Notations Let and Seq as
