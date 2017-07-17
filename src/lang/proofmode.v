@@ -81,7 +81,6 @@ Tactic Notation "wp_lam" :=
 
 Tactic Notation "wp_let" := wp_lam.
 Tactic Notation "wp_seq" := wp_let.
-Tactic Notation "wp_while" := wp_seq.
 
 Tactic Notation "wp_op" :=
   iStartProof;

@@ -15,6 +15,7 @@ Inductive expr :=
   | Rec (f x : binder) (e : expr)
   | App (e1 e2 : expr)
   | While (e1 e2 : expr)
+  | Repeat (e1 e2 : expr)
   (* Base types and their operations *)
   | Lit (l : base_lit)
   | UnOp (op : un_op) (e : expr)
@@ -45,6 +46,7 @@ Fixpoint to_expr (e : expr) : heap_lang.expr :=
   | Rec f x e => heap_lang.Rec f x (to_expr e)
   | App e1 e2 => heap_lang.App (to_expr e1) (to_expr e2)
   | While e1 e2 => heap_lang.While (to_expr e1) (to_expr e2)
+  | Repeat e1 e2 => heap_lang.Repeat (to_expr e1) (to_expr e2)
   | Lit l => heap_lang.Lit l
   | UnOp op e => heap_lang.UnOp op (to_expr e)
   | BinOp op e1 e2 => heap_lang.BinOp op (to_expr e1) (to_expr e2)
@@ -71,6 +73,8 @@ Ltac of_expr e :=
      let e1 := of_expr e1 in let e2 := of_expr e2 in constr:(App e1 e2)
   | heap_lang.While ?e1 ?e2 =>
      let e1 := of_expr e1 in let e2 := of_expr e2 in constr:(While e1 e2)
+  | heap_lang.Repeat ?e1 ?e2 =>
+     let e1 := of_expr e1 in let e2 := of_expr e2 in constr:(Repeat e1 e2)
   | heap_lang.Lit ?l => constr:(Lit l)
   | heap_lang.UnOp ?op ?e => let e := of_expr e in constr:(UnOp op e)
   | heap_lang.BinOp ?op ?e1 ?e2 =>
@@ -110,7 +114,7 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
   | Lit _ => true
   | UnOp _ e | Fst e | Snd e | InjL e | InjR e | Fork e | Alloc e | Load e =>
      is_closed X e
-  | App e1 e2 | While e1 e2 | BinOp _ e1 e2 | Pair e1 e2 | Store e1 e2 =>
+  | App e1 e2 | While e1 e2 | Repeat e1 e2 | BinOp _ e1 e2 | Pair e1 e2 | Store e1 e2 =>
      is_closed X e1 && is_closed X e2
   | TernOp _ e0 e1 e2 | If e0 e1 e2 | Case e0 e1 e2 | CAS e0 e1 e2 =>
      is_closed X e0 && is_closed X e1 && is_closed X e2
@@ -157,6 +161,7 @@ Fixpoint subst (x : string) (es : expr) (e : expr)  : expr :=
      Rec f y $ if decide (BNamed x ≠ f ∧ BNamed x ≠ y) then subst x es e else e
   | App e1 e2 => App (subst x es e1) (subst x es e2)
   | While e1 e2 => While (subst x es e1) (subst x es e2)
+  | Repeat e1 e2 => Repeat (subst x es e1) (subst x es e2)
   | Lit l => Lit l
   | UnOp op e => UnOp op (subst x es e)
   | BinOp op e1 e2 => BinOp op (subst x es e1) (subst x es e2)
@@ -273,8 +278,6 @@ Ltac reshape_expr e tac :=
   | _ => tac K e
   | App ?e1 ?e2 => reshape_val e1 ltac:(fun v1 => go (AppRCtx v1 :: K) e2)
   | App ?e1 ?e2 => go (AppLCtx e2 :: K) e1
-  | While ?e1 ?e2 => reshape_val e1 ltac:(fun v1 => go (WhileCtx e2 :: K) v1)
-  | While ?e1 ?e2 => go (WhileCtx e2 :: K) e1
   | UnOp ?op ?e => go (UnOpCtx op :: K) e
   | BinOp ?op ?e1 ?e2 =>
      reshape_val e1 ltac:(fun v1 => go (BinOpRCtx op v1 :: K) e2)
@@ -282,7 +285,7 @@ Ltac reshape_expr e tac :=
   | TernOp ?op ?e1 ?e2 ?e3 =>
      reshape_val e1 ltac:(fun v1 => reshape_val e2 ltac:(fun v2 => go (TernOp3Ctx op v1 v2 :: K) e3))
   | TernOp ?op ?e1 ?e2 ?e3 =>
-     reshape_val e1 ltac:(fun v1 => go (TernOp2Ctx op v1 e2 :: K) e2)
+     reshape_val e1 ltac:(fun v1 => go (TernOp2Ctx op v1 e3 :: K) e2)
   | TernOp ?op ?e1 ?e2 ?e3 => go (TernOp1Ctx op e2 e3 :: K) e1
   | If ?e0 ?e1 ?e2 => go (IfCtx e1 e2 :: K) e0
   | Pair ?e1 ?e2 => reshape_val e1 ltac:(fun v1 => go (PairRCtx v1 :: K) e2)

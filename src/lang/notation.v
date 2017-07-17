@@ -1,9 +1,11 @@
 From iris.program_logic Require Import language.
 Require Export lang tactics.
+Require Import Reals.
 Set Default Proof Using "Type".
 
 Coercion LitInt : Z >-> base_lit.
 Coercion LitBool : bool >-> base_lit.
+Coercion LitREAL : R >-> base_lit.
 Coercion LitLoc : loc >-> base_lit.
 
 Coercion App : expr >-> Funclass.
@@ -18,6 +20,8 @@ Notation "<>" := BAnon : binder_scope.
 properly. *)
 Notation "# l" := (LitV l%Z%V) (at level 8, format "# l").
 Notation "# l" := (Lit l%Z%V) (at level 8, format "# l") : expr_scope.
+Notation "## l" := (Lit (LitREAL l)) (at level 8, format "## l").
+Notation "## l" := (Lit (LitREAL l)) (at level 8, format "## l") : expr_scope.
 
 (** Syntax inspired by Coq/Ocaml. Constructions with higher precedence come
     first. *)
@@ -64,6 +68,8 @@ Notation "'rec:' f x := e" := (locked (RecV f%bind x%bind e%E))
 Notation "'if:' e1 'then' e2 'else' e3" := (If e1%E e2%E e3%E)
   (at level 200, e1, e2, e3 at level 200) : expr_scope.
 Notation "'while:' e1 'do' e2" := (While e1%E e2%E)
+  (at level 200, e1, e2 at level 200) : expr_scope.
+Notation "'repeat:' e1 'until' e2" := (Repeat e1%E e2%E)
   (at level 200, e1, e2 at level 200) : expr_scope.
 
 (** Derived notions, in order of declaration. The notations for let and seq

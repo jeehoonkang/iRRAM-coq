@@ -43,6 +43,7 @@ Inductive expr :=
   | App (e1 e2 : expr)
   (* While *)
   | While (e1 e2 : expr)
+  | Repeat (e1 e2 : expr)
   (* Base types and their operations *)
   | Lit (l : base_lit)
   | UnOp (op : un_op) (e : expr)
@@ -74,7 +75,7 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
   | Lit _ => true
   | UnOp _ e | Fst e | Snd e | InjL e | InjR e | Fork e | Alloc e | Load e =>
      is_closed X e
-  | While e1 e2 | App e1 e2 | BinOp _ e1 e2 | Pair e1 e2 | Store e1 e2 =>
+  | While e1 e2 | Repeat e1 e2 | App e1 e2 | BinOp _ e1 e2 | Pair e1 e2 | Store e1 e2 =>
      is_closed X e1 && is_closed X e2
   | TernOp _ e0 e1 e2 | If e0 e1 e2 | Case e0 e1 e2 | CAS e0 e1 e2 =>
      is_closed X e0 && is_closed X e1 && is_closed X e2
@@ -167,7 +168,6 @@ Canonical Structure exprC := leibnizC expr.
 Inductive ectx_item :=
   | AppLCtx (e2 : expr)
   | AppRCtx (v1 : val)
-  | WhileCtx (e2 : expr)
   | UnOpCtx (op : un_op)
   | BinOpLCtx (op : bin_op) (e2 : expr)
   | BinOpRCtx (op : bin_op) (v1 : val)
@@ -194,7 +194,6 @@ Definition fill_item (Ki : ectx_item) (e : expr) : expr :=
   match Ki with
   | AppLCtx e2 => App e e2
   | AppRCtx v1 => App (of_val v1) e
-  | WhileCtx e2 => While e e2
   | UnOpCtx op => UnOp op e
   | BinOpLCtx op e2 => BinOp op e e2
   | BinOpRCtx op v1 => BinOp op (of_val v1) e
@@ -226,6 +225,7 @@ Fixpoint subst (x : string) (es : expr) (e : expr)  : expr :=
      Rec f y $ if decide (BNamed x ≠ f ∧ BNamed x ≠ y) then subst x es e else e
   | App e1 e2 => App (subst x es e1) (subst x es e2)
   | While e1 e2 => While (subst x es e1) (subst x es e2)
+  | Repeat e1 e2 => Repeat (subst x es e1) (subst x es e2)
   | Lit l => Lit l
   | UnOp op e => UnOp op (subst x es e)
   | BinOp op e1 e2 => BinOp op (subst x es e1) (subst x es e2)
@@ -261,13 +261,13 @@ Definition bin_op_eval (op : bin_op) (v1 v2 : val) : option val :=
   | PlusOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitInt (n1 + n2)
   | MinusOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitInt (n1 - n2)
   | MulOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitInt (n1 * n2)
-  | DivOp, LitV (LitInt n1), LitV (LitInt n2) => if bool_decide (n2 = 0) then Some $ LitV $ LitInt (n1 / n2) else None
+  | DivOp, LitV (LitInt n1), LitV (LitInt n2) => if bool_decide (n2 = 0) then None else Some $ LitV $ LitInt (n1 / n2)
 
   | PlusOp, LitV (LitREAL n1), LitV (LitREAL n2) => Some $ LitV $ LitREAL (n1 + n2)
   | MinusOp, LitV (LitREAL n1), LitV (LitREAL n2) => Some $ LitV $ LitREAL (n1 - n2)
   | MulOp, LitV (LitREAL n1), LitV (LitREAL n2) => Some $ LitV $ LitREAL (n1 * n2)
-  | DivOp, LitV (LitREAL n1), LitV (LitREAL n2) => if bool_decide (n2 = 0)%R then Some $ LitV $ LitREAL (n1 / n2) else None
-  | PowOp, LitV (LitREAL n1), LitV (LitREAL n2) => Some $ (LitV $ LitREAL (Rpower n1 n2))
+  | DivOp, LitV (LitREAL n1), LitV (LitREAL n2) => if bool_decide (n2 = 0)%R then None else Some $ LitV $ LitREAL (n1 / n2)
+  | PowOp, LitV (LitREAL n1), LitV (LitInt n2) => Some $ (LitV $ LitREAL (Rpower n1 (IZR n2)))
 
   | LeOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitBool $ bool_decide (n1 ≤ n2)
   | LtOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitBool $ bool_decide (n1 < n2)
@@ -292,12 +292,10 @@ Inductive head_step : expr → state → expr → state → list (expr) → Prop
      Closed (f :b: x :b: []) e1 →
      e' = subst' x (of_val v2) (subst' f (Rec f x e1) e1) →
      head_step (App (Rec f x e1) e2) σ e' σ []
-  | WhileTrueS e1 e2 σ :
-     to_val e1 = Some (LitV $ LitBool $ true) →
-     head_step (While e1 e2) σ (App (Rec BAnon BAnon (While e1 e2)) e2) σ []
-  | WhileFalseS e1 e2 σ :
-     to_val e1 = Some (LitV $ LitBool $ false) →
-     head_step (While e1 e2) σ (Lit $ LitBool $ false) σ []
+  | WhileS e1 e2 σ :
+     head_step (While e1 e2) σ (If e1 (App (Rec BAnon BAnon (While e1 e2)) e2) (Lit $ LitBool false)) σ []
+  | RepeatS e1 e2 σ :
+     head_step (Repeat e1 e2) σ (App (Rec BAnon BAnon (If e2 (Lit $ LitBool true) (Repeat e1 e2))) e1) σ []
   | UnOpS op e v v' σ :
      to_val e = Some v →
      un_op_eval op v = Some v' → 

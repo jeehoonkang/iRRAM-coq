@@ -92,19 +92,17 @@ Proof.
   intros; inv_head_step; eauto.
 Qed.
 
-Lemma wp_while_true E e1 e2 Φ :
-  to_val e1 = Some $ LitV $ LitBool $ true ->
-  ▷ WP (Seq e2 (While e1 e2)) @ E {{ Φ }} ⊢ WP While e1 e2 @ E {{ Φ }}.
+Lemma wp_while E e1 e2 Φ :
+  ▷ WP (If e1 (Seq e2 (While e1 e2)) (Lit $ LitBool false)) @ E {{ Φ }} ⊢ WP While e1 e2 @ E {{ Φ }}.
 Proof.
-  intros ?. rewrite -(wp_lift_pure_det_head_step_no_fork' (While _ _)); eauto.
+  rewrite -(wp_lift_pure_det_head_step_no_fork' (While _ _)); eauto.
   intros; inv_head_step; eauto.
 Qed.
 
-Lemma wp_while_false E e1 e2 Φ :
-  to_val e1 = Some $ LitV $ LitBool $ false ->
-  ▷ WP (Lit $ LitBool $ false) @ E {{ Φ }} ⊢ WP While e1 e2 @ E {{ Φ }}.
+Lemma wp_repeat E e1 e2 Φ :
+  ▷ WP (Seq e1 (If e2 (Lit $ LitBool true) (Repeat e1 e2))) @ E {{ Φ }} ⊢ WP Repeat e1 e2 @ E {{ Φ }}.
 Proof.
-  intros ?. rewrite -(wp_lift_pure_det_head_step_no_fork' (While _ _)); eauto.
+  rewrite -(wp_lift_pure_det_head_step_no_fork' (Repeat _ _)); eauto.
   intros; inv_head_step; eauto.
 Qed.
 
