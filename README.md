@@ -34,9 +34,11 @@ Now, execute `make dep` to install all dependencies of iRRAM-coq. Finally,
 execute `make` to quickly compile the development, and `make build` for fully
 build the development.
 
-## Structure
+## Run ilog2
 
-TBA
+```sh
+./run_ilog2.sh
+```
 
 
 [coq]: https://coq.inria.fr/
