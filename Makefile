@@ -14,10 +14,14 @@ dep:
 	opam pin remove opam-builddep-temp
 
 build: Makefile.coq
-	mkdir -p .build/ocaml/extraction
 	rsync -avl --delete --exclude '*.vo' --exclude '*.vio' --exclude '*.v.d' --exclude '*.glob' --exclude '.*.aux' src Makefile.coq _CoqProject .build
-	cd .build
+	rm -rf .build/src/lang/lib/ilog2_extraction.vo
 	$(MAKE) -j -C .build -f Makefile.coq
+	rm -rf .build/ocaml/extraction/Ascii.ml .build/ocaml/extraction/BinNums.ml .build/ocaml/extraction/String.ml
+	rm -rf .build/ocaml/extraction/Ascii.mli .build/ocaml/extraction/BinNums.mli .build/ocaml/extraction/String.mli
+
+ocaml:
+	cd ocaml; ocamlbuild -I extraction 'ilog2_print.native'
 
 quick: Makefile.coq
 	$(MAKE) -f Makefile.coq quick

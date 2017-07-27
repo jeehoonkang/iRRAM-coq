@@ -10,10 +10,10 @@ Set Default Proof Using "Type".
 Definition ilog2 : expr :=
   λ: "x",
   let: "l" := ref #1 in
-  (if: ##(3/2) <(#-1) "x"
+  (if: ##(3,2) <(#-1) "x"
    then let: "y" := ref "x" in
-        while: (##(5/2) <(#(-1)) !"y")
-        do ("l" <- !"l" + #1;; "y" <- !"y" / ##(2))
+        while: (##(5,2) <(#(-1)) !"y")
+        do ("l" <- !"l" + #1;; "y" <- !"y" / ##2)
    else repeat: ("l" <- !"l" - #1)
         until (##3 * ##2 ^ (!"l"-#2)) <(!"l"-#2) "x")
   ;;
@@ -72,7 +72,7 @@ Section proof.
      * "wp_alloc" asserts a points-to assertion "ll ↦ v":
      * the memory location ll points to the value v.
      *)
-    wp_seq. wp_bind (_ <(_) _)%E.
+    wp_seq. wp_op. wp_bind (_ <(_) _)%E.
     iApply wp_rlt; eauto.
     (* NOTE:
      *
@@ -127,7 +127,7 @@ Section proof.
        * P
        *)
       iDestruct "INV" as (l y) "[Hl [Hy %]]". destruct H as [HY HX].
-      iApply wp_while. iNext.
+      iApply wp_while. iNext. wp_op.
       wp_load.
       (* NOTE:
        *
@@ -153,7 +153,7 @@ Section proof.
          * we require "ll ↦ ??" as a pre-invariant.
          * Fortunately, We have "Hl" : ll ↦ #l.
          *)
-        wp_seq. wp_load. wp_op; cycle 1.
+        wp_seq. wp_load. wp_op. wp_op; cycle 1.
         { destruct (bool_decide_reflect (2%R = 0%R)); eauto. ria. }
         wp_store.
         iApply ("IH" with "HΦ").

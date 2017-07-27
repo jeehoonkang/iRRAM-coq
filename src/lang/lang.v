@@ -14,9 +14,9 @@ Definition loc := positive. (* Really, any countable type. *)
 Inductive base_lit : Set :=
   | LitInt (n : Z) | LitREAL (r : R) | LitBool (b : bool) | LitUnit | LitLoc (l : loc).
 Inductive un_op : Set :=
-  | NegOp | MinusUnOp.
+  | NegOp | MinusUnOp | RCastOp.
 Inductive bin_op : Set :=
-  | PlusOp | MinusOp | MulOp | DivOp | PowOp | LeOp | LtOp | EqOp.
+  | PlusOp | MinusOp | MulOp | DivOp | PowOp | RQuotOp | LeOp | LtOp | EqOp.
 Inductive tern_op : Set :=
   | RLtOp.
 
@@ -253,6 +253,7 @@ Definition un_op_eval (op : un_op) (v : val) : option val :=
   | NegOp, LitV (LitBool b) => Some $ LitV $ LitBool (negb b)
   | MinusUnOp, LitV (LitInt n) => Some $ LitV $ LitInt (- n)
   | MinusUnOp, LitV (LitREAL r) => Some $ LitV $ LitREAL (- r)
+  | RCastOp, LitV (LitInt n) => Some $ LitV $ LitREAL (IZR n)
   | _, _ => None
   end.
 
@@ -268,6 +269,7 @@ Definition bin_op_eval (op : bin_op) (v1 v2 : val) : option val :=
   | MulOp, LitV (LitREAL n1), LitV (LitREAL n2) => Some $ LitV $ LitREAL (n1 * n2)
   | DivOp, LitV (LitREAL n1), LitV (LitREAL n2) => if bool_decide (n2 = 0)%R then None else Some $ LitV $ LitREAL (n1 / n2)
   | PowOp, LitV (LitREAL n1), LitV (LitInt n2) => Some $ (LitV $ LitREAL (Rpower n1 (IZR n2)))
+  | RQuotOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ (LitV $ LitREAL ((IZR n1) / (IZR n2)))
 
   | LeOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitBool $ bool_decide (n1 ≤ n2)
   | LtOp, LitV (LitInt n1), LitV (LitInt n2) => Some $ LitV $ LitBool $ bool_decide (n1 < n2)

@@ -20,8 +20,8 @@ Notation "<>" := BAnon : binder_scope.
 properly. *)
 Notation "# l" := (LitV l%Z%V) (at level 8, format "# l").
 Notation "# l" := (Lit l%Z%V) (at level 8, format "# l") : expr_scope.
-Notation "## l" := (Lit (LitREAL l)) (at level 8, format "## l").
-Notation "## l" := (Lit (LitREAL l)) (at level 8, format "## l") : expr_scope.
+Notation "## z" := (UnOp RCastOp (Lit z%Z%V)) (at level 8, format "## z").
+Notation "##( a , b )" := (BinOp RQuotOp (Lit a%Z%V) (Lit b%Z%V)) (at level 8, format "##( a , b )") : expr_scope.
 
 (** Syntax inspired by Coq/Ocaml. Constructions with higher precedence come
     first. *)
