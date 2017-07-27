@@ -48,8 +48,8 @@ let string_of_bin_op (op:bin_op): string =
 
 let string_of_bin_op op v1 v2: string =
   match op with
-  | PowOp -> sprintf "REAL_pow(%s, %s)" v1 v2
-  | RQuotOp -> sprintf "REAL(%s, %s)" v1 v2
+  | PowOp -> sprintf "power(%s, %s)" v1 v2
+  | RQuotOp -> sprintf "(REAL(%s) / REAL(%s))" v1 v2
   | _ -> sprintf "(%s %s %s)" v1 (string_of_bin_op op) v2
 
 let string_of_tern_op op v1 v2 v3: string =
@@ -66,7 +66,7 @@ let rec string_of_expr (e:iRRAM_expr): string =
   | Coq_iRRAM_Pair (e1, e2) -> sprintf "make_pair(%s, %s)" (string_of_expr e1) (string_of_expr e2)
   | Coq_iRRAM_Fst e1 -> sprintf "(%s.first)" (string_of_expr e1)
   | Coq_iRRAM_Snd e1 -> sprintf "(%s.second)" (string_of_expr e1)
-  | Coq_iRRAM_Load e1 -> sprintf "(*%s)" (string_of_expr e1)
+  | Coq_iRRAM_Load e1 -> (string_of_expr e1)
 
 let rec spaces (indent:int): string =
   if indent <= 0
@@ -93,7 +93,7 @@ let rec string_of_stmt ?(indent=0) (s:iRRAM_stmt): string =
     string_of_stmts ~indent:(indent + 1) e3 ^
     (spaces indent) ^ "}\n"
   | Coq_iRRAM_Store (e1, e2) ->
-    (spaces indent) ^ "*(" ^ (string_of_expr e1) ^ ") = " ^ (string_of_expr e2) ^ ";\n"
+    (spaces indent) ^ (string_of_expr e1) ^ " = " ^ (string_of_expr e2) ^ ";\n"
 
 and string_of_stmts ?(indent=0) (s:iRRAM_stmt list): string =
   String.concat "\n" (List.map (string_of_stmt ~indent:indent) s)
@@ -111,7 +111,9 @@ let string_of_params ps =
   String.concat ", " (List.map string_of_param ps)
 
 let string_of_function f =
-  "#include \"iRRAM.h\"\n\n" ^
+  "#include \"iRRAM/lib.h\"\n" ^
+  "#include \"iRRAM-lt.h\"\n\n" ^
+  "using namespace iRRAM;\n\n" ^
   (string_of_type f.restype) ^ " " ^ (camlstring_of_coqstring f.name) ^ "(" ^
   (string_of_params f.params) ^
   ") {\n" ^
