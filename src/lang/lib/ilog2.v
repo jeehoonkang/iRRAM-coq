@@ -3,7 +3,7 @@ From iris.base_logic.lib Require Export invariants.
 From iris.heap_lang Require Export lang.
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import frac_auth auth.
-From iRRAM.lang Require Import proofmode notation extraction real_lemmas.
+From iRRAM.lang Require Import proofmode notation real_lemmas.
 Require Import Reals Fourier.
 Set Default Proof Using "Type".
 
@@ -36,8 +36,9 @@ Section proof.
     (* NOTE:
      *
      * Hoare triple {{{ P }}} C {{{ RET l; Q }}}:
-     *    if the pre-invariant P holds and C is executed and its result is l,
-     *    then the post-invariant Q holds.
+     *    if the pre-invariant P holds,
+     *    then C is safe to execute,
+     *    and when C's result is l, the post-invariant Q holds.
      *
      * Please regard ⌜P⌝ as just P, and #x as x.
      *)

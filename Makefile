@@ -14,7 +14,7 @@ dep:
 	opam pin remove opam-builddep-temp
 
 build: Makefile.coq
-	mkdir -p .build
+	mkdir -p .build/ocaml/extraction
 	rsync -avl --delete --exclude '*.vo' --exclude '*.vio' --exclude '*.v.d' --exclude '*.glob' --exclude '.*.aux' src Makefile.coq _CoqProject .build
 	cd .build
 	$(MAKE) -j -C .build -f Makefile.coq

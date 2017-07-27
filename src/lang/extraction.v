@@ -5,6 +5,7 @@ From iris.proofmode Require Import tactics.
 From iris.algebra Require Import frac_auth auth.
 From iRRAM.lang Require Import proofmode notation.
 Require Import Reals String.
+Require Export ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlZInt ExtrOcamlString.
 Set Default Proof Using "Type".
 
 
@@ -59,109 +60,6 @@ Structure iRRAM_function := mk_iRRAM_function {
   restype: iRRAM_type;
   body: list iRRAM_stmt;
 }.
-
-(* to_string *)
-
-Definition newline := String "010" "".
-
-Definition lit_to_string (l:base_lit): string :=
-  match l with
-  | LitInt z => "TODO"
-  | LitREAL r => "TODO"
-  | LitBool b => "TODO"
-  | LitUnit => "void"
-  | LitLoc l => "loc"
-  end.
-
-Definition un_op_to_string (op:un_op): string :=
-  match op with
-  | NegOp => "~"
-  | MinusUnOp => "-"
-  end.
-
-Definition bin_op_to_string (op:bin_op): string :=
-  match op with
-  | PlusOp => "+"
-  | MinusOp => "-"
-  | MulOp => "*"
-  | DivOp => "/"
-  | PowOp => "^"
-  | LeOp => "<="
-  | LtOp => "<"
-  | EqOp => "=="
-  end.
-
-Definition iRRAM_bin_op_to_string op v1 v2: string :=
-  match op with
-  | PowOp => "REAL_pow(" ++ v1 ++ ", " ++ v2 ++ ")"
-  | _ => "(" ++ v1 ++ " " ++ (bin_op_to_string op) ++ " " ++ v2 ++ ")"
-  end.
-
-Definition iRRAM_tern_op_to_string op v1 v2 v3: string :=
-  match op with
-  | RLtOp => "REAL_lt(" ++ v1 ++ ", " ++ v2 ++ ", " ++ v3 ++ ")"
-  end.
-
-Fixpoint iRRAM_expr_to_string (e:iRRAM_expr): string :=
-  match e with
-  | iRRAM_Var x => x
-  | iRRAM_Lit l => lit_to_string l
-  | iRRAM_UnOp op e1 => "(" ++ (un_op_to_string op) ++ " " ++ (iRRAM_expr_to_string e1) ++ ")"
-  | iRRAM_BinOp op e1 e2 => iRRAM_bin_op_to_string op (iRRAM_expr_to_string e1) (iRRAM_expr_to_string e2)
-  | iRRAM_TernOp op e1 e2 e3 => iRRAM_tern_op_to_string op (iRRAM_expr_to_string e1) (iRRAM_expr_to_string e2) (iRRAM_expr_to_string e3)
-  | iRRAM_Pair e1 e2 => "make_pair(" ++ (iRRAM_expr_to_string e1) ++ ", " ++ (iRRAM_expr_to_string e2) ++ ")"
-  | iRRAM_Fst e1 => (iRRAM_expr_to_string e1) ++ ".first"
-  | iRRAM_Snd e1 => (iRRAM_expr_to_string e1) ++ ".second"
-  | iRRAM_Load e1 => "(*" ++ (iRRAM_expr_to_string e1) ++ ")"
-  end.
-
-Fixpoint spaces (indent:nat): string :=
-  match indent with
-  | O => ""
-  | S indent' => "  " ++ (spaces indent')
-  end.
-
-Definition iRRAM_stmts_to_string_ (iRRAM_stmts_to_string:nat -> iRRAM_stmt -> string) (indent:nat) (s:list iRRAM_stmt): string :=
-  fold_left append (map (iRRAM_stmts_to_string indent) s) "".
-
-Fixpoint iRRAM_stmt_to_string (indent:nat) (s:iRRAM_stmt): string :=
-  match s with
-  | iRRAM_Return e1 => (spaces indent) ++ "return " ++ (iRRAM_expr_to_string e1) ++ ";" ++ newline
-  | iRRAM_VarDecl x e1 => (spaces indent) ++ "auto " ++ x ++ " = " ++ (iRRAM_expr_to_string e1) ++ ";" ++ newline
-  | iRRAM_While e1 e2 =>
-    (spaces indent) ++ "while (" ++ (iRRAM_expr_to_string e1) ++ ") {" ++ newline ++
-    iRRAM_stmts_to_string_ iRRAM_stmt_to_string (S indent) e2 ++
-    (spaces indent) ++ "}" ++ newline
-  | iRRAM_Repeat e1 e2 =>
-    (spaces indent) ++ "do {" ++ newline ++
-    iRRAM_stmts_to_string_ iRRAM_stmt_to_string (S indent) e1 ++
-    (spaces indent) ++ "} while (" ++ (iRRAM_expr_to_string e2) ++ ");" ++ newline
-  | iRRAM_If e1 e2 e3 =>
-    (spaces indent) ++ "if (" ++ (iRRAM_expr_to_string e1) ++ ") {" ++ newline ++
-    iRRAM_stmts_to_string_ iRRAM_stmt_to_string (S indent) e2 ++
-    (spaces indent) ++ "}" ++ newline ++
-    (spaces indent) ++ "else {" ++ newline ++
-    iRRAM_stmts_to_string_ iRRAM_stmt_to_string (S indent) e3 ++
-    (spaces indent) ++ "}" ++ newline
-  | iRRAM_Store e1 e2 =>
-    (spaces indent) ++ "*(" ++ (iRRAM_expr_to_string e1) ++ ") = " ++ (iRRAM_expr_to_string e2) ++ ";" ++ newline
-  end.
-
-Definition iRRAM_stmts_to_string := iRRAM_stmts_to_string_ iRRAM_stmt_to_string.
-
-Definition iRRAM_type_to_string t :=
-  match t with
-  | iRRAM_Int => "int"
-  | iRRAM_Bool => "Bool"
-  | iRRAM_REAL => "REAL"
-  end.
-
-Definition iRRAM_function_to_string f: string :=
-  (iRRAM_type_to_string f.(restype)) ++ " " ++ f.(name) ++ "(" ++
-  "TODO" ++
-  ") {" ++ newline ++
-  (iRRAM_stmts_to_string 1 f.(body)) ++
-  "}" ++ newline.
 
 
 (* converter *)
@@ -257,9 +155,3 @@ Definition to_iRRAM_function (name:string) (paramtypes: list iRRAM_type) (restyp
   bind (to_iRRAM_params paramtypes e) (fun r =>
   bind (to_iRRAM_stmts r.(snd)) (fun s =>
     OK $ mk_iRRAM_function name r.(fst) restype s)).
-
-Definition expr_to_iRRAM_function_string (name:string) (paramtypes: list iRRAM_type) (restype: iRRAM_type) (e:expr): string :=
-  match to_iRRAM_function name paramtypes restype e with
-  | OK f => iRRAM_function_to_string f
-  | Err err => "// " ++ err
-  end.
