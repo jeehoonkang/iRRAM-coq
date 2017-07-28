@@ -15,6 +15,7 @@ dep:
 
 build: Makefile.coq
 	rsync -avl --delete --exclude '*.vo' --exclude '*.vio' --exclude '*.v.d' --exclude '*.glob' --exclude '.*.aux' src Makefile.coq _CoqProject .build
+	mkdir .build/ocaml/extraction
 	rm -rf .build/src/lang/lib/ilog2_extraction.vo
 	$(MAKE) -j -C .build -f Makefile.coq
 	rm -rf .build/ocaml/extraction/Ascii.ml .build/ocaml/extraction/BinNums.ml .build/ocaml/extraction/String.ml
