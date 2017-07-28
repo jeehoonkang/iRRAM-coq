@@ -37,6 +37,7 @@ build the development.
 ## Run ilog2
 
 ```sh
+opam install ocamlbuild batteries # install OCaml libraries
 ./run_ilog2.sh
 ```
 
